@@ -1,5 +1,4 @@
-﻿
-using Furball.Zerda.Explorer;
+﻿using Furball.Zerda.Explorer;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;

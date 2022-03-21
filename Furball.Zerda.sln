@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Furball.Zerda", "Furball.Ze
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Furball.Zerda.Explorer", "Furball.Zerda.Explorer\Furball.Zerda.Explorer.csproj", "{4324CB89-0DF8-49F6-B17F-46E363EDE38F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Furball.Zerda.TestProject", "Furball.Zerda.TestProject\Furball.Zerda.TestProject.csproj", "{8C996CC9-1AAF-46EB-81FA-637775417B73}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{4324CB89-0DF8-49F6-B17F-46E363EDE38F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4324CB89-0DF8-49F6-B17F-46E363EDE38F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4324CB89-0DF8-49F6-B17F-46E363EDE38F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C996CC9-1AAF-46EB-81FA-637775417B73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C996CC9-1AAF-46EB-81FA-637775417B73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C996CC9-1AAF-46EB-81FA-637775417B73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C996CC9-1AAF-46EB-81FA-637775417B73}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
