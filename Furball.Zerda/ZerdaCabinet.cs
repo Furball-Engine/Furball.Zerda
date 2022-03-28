@@ -1,9 +1,7 @@
-﻿using System.Text;
+﻿using System.IO.MemoryMappedFiles;
+using System.Text;
 
 namespace Furball.Zerda;
-
-//TODO: Alot of Error Checking
-//TODO: Maybe OpenRead and OpenWrite?
 
 public class ZerdaCabinet {
     private List<Entry> _entries;
