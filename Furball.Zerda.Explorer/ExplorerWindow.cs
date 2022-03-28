@@ -9,6 +9,11 @@ public class ExplorerWindow {
     private ZerdaCabinet _workingCabinet;
     private bool         _awaitingOpenFileDrop = false;
 
+    public void LoadArchive(string filename) {
+        if(File.Exists(filename))
+            this._workingCabinet = new ZerdaCabinet(filename);
+    }
+
     public unsafe ExplorerWindow(IWindow window) {
         var io = ImGui.GetIO();
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
@@ -160,10 +165,37 @@ public class ExplorerWindow {
                     ImGui.Text(this._workingCabinet.Filename);
                     ImGui.Separator();
 
-                    for (int i = 0; i != this._workingCabinet.Entries.Count; i++) {
-                        Entry currentEntry = this._workingCabinet.Entries[i];
+                    ImGui.Text($"{this._workingCabinet.Entries.Count} entires described.");
 
-                        ImGui.Text($"{currentEntry.Filename} :: {Math.Round((double) currentEntry.Size / 1024.0, 2)}kb :: Last Modified {DateTimeOffset.FromUnixTimeSeconds(currentEntry.ModificationDate).ToString()}");
+                    if(ImGui.BeginTable("FileTable", 3)) {
+
+                        ImGui.TableSetupColumn("Filename");
+                        ImGui.TableSetupColumn("Size");
+                        ImGui.TableSetupColumn("Modification Date");
+
+                        ImGui.TableHeadersRow();
+
+                        for (int i = 0; i != this._workingCabinet.Entries.Count; i++) {
+                            Entry currentEntry = this._workingCabinet.Entries[i];
+
+                            ImGui.TableNextRow();
+
+                            ImGui.TableNextRow();
+
+                            ImGui.TableSetColumnIndex(0);
+                            ImGui.Text(currentEntry.Filename);
+
+                            ImGui.TableSetColumnIndex(1);
+
+                            double kilobytes = Math.Round((double)currentEntry.Size / 1024.0, 2);
+
+                            ImGui.Text($"{kilobytes}kb");
+
+                            ImGui.TableSetColumnIndex(2);
+                            ImGui.Text(DateTimeOffset.FromUnixTimeSeconds(currentEntry.ModificationDate).ToString());
+                        }
+
+                        ImGui.EndTable();
                     }
                 }
             }

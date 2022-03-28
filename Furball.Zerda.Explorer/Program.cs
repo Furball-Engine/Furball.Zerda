@@ -16,6 +16,9 @@ ExplorerWindow explorerWindow = null;
 window.Load += delegate {
     imGuiController = new ImGuiController(gl = window.CreateOpenGL(), window, inputContext = window.CreateInput(), delegate {
         explorerWindow = new ExplorerWindow(window!);
+
+        if(args.Length != 0)
+            explorerWindow.LoadArchive(args[0]);
     });
 };
 
