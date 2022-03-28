@@ -15,7 +15,7 @@ ExplorerWindow explorerWindow = null;
 
 window.Load += delegate {
     imGuiController = new ImGuiController(gl = window.CreateOpenGL(), window, inputContext = window.CreateInput(), delegate {
-        explorerWindow = new ExplorerWindow();
+        explorerWindow = new ExplorerWindow(window!);
     });
 };
 
@@ -24,11 +24,11 @@ window.FramebufferResize += delegate(Vector2D<int> newSize) {
 };
 
 window.Render += delegate(double delta) {
-    imGuiController.Update((float) delta);
+    imGuiController!.Update((float) delta);
 
     gl.Clear(ClearBufferMask.ColorBufferBit);
 
-    explorerWindow.Draw(delta);
+    explorerWindow!.Draw(delta);
 
     imGuiController.Render();
 };

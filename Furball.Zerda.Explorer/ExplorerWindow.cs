@@ -1,11 +1,15 @@
 using System.Numerics;
 using Furball.Zerda.Explorer.ImGuiData;
 using ImGuiNET;
+using Silk.NET.Windowing;
 
 namespace Furball.Zerda.Explorer;
 
 public class ExplorerWindow {
-    public unsafe ExplorerWindow() {
+    private ZerdaCabinet _workingCabinet;
+    private bool         _awaitingOpenFileDrop = false;
+
+    public unsafe ExplorerWindow(IWindow window) {
         var io = ImGui.GetIO();
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
@@ -69,6 +73,16 @@ public class ExplorerWindow {
         colors[(int)ImGuiCol.NavWindowingHighlight] = new Vector4(1.00f, 1.00f, 1.00f, 0.70f);
         colors[(int)ImGuiCol.NavWindowingDimBg]     = new Vector4(0.80f, 0.80f, 0.80f, 0.20f);
         colors[(int)ImGuiCol.ModalWindowDimBg]      = new Vector4(0.80f, 0.80f, 0.80f, 0.35f);
+
+        window.FileDrop += WindowOnFileDrop;
+    }
+
+    private void WindowOnFileDrop(string[] files) {
+        if (this._awaitingOpenFileDrop) {
+            this._workingCabinet = new ZerdaCabinet(files[0]);
+
+            this._awaitingOpenFileDrop = false;
+        }
     }
 
     public void Draw(double delta) {
@@ -91,24 +105,74 @@ public class ExplorerWindow {
 
         var dockspaceId = ImGui.GetID("MainWindow");
 
+
+
         ImGui.DockSpace(dockspaceId, Vector2.Zero, ImGuiDockNodeFlags.None);
         {
             if (ImGui.BeginMainMenuBar()) {
                 if (ImGui.BeginMenu("File")) {
                     if (ImGui.MenuItem("New")) {
-
+                        this._workingCabinet = new ZerdaCabinet() {
+                            Filename = "New Cabinet"
+                        };
                     }
-                    if (ImGui.MenuItem("Open")) {
 
+                    if (ImGui.MenuItem("Open")) {
+                        this._awaitingOpenFileDrop = true;
                     }
 
                     ImGui.EndMenu();
                 }
 
+                //Top Menu Bar
                 ImGui.EndMainMenuBar();
             }
+
+            if(this._awaitingOpenFileDrop)
+                ImGui.OpenPopup("Open File");
+
+            ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+
+            bool uselessRef = true;
+
+            if(ImGui.BeginPopupModal("Open File", ref uselessRef, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoMove)) {
+                if (!this._awaitingOpenFileDrop) {
+                    ImGui.CloseCurrentPopup();
+                }
+
+                ImGui.Text("Please Drag a file onto this window to open.");
+                ImGui.Separator();
+
+                if (ImGui.Button("Cancel")) {
+                    ImGui.CloseCurrentPopup();
+
+                    this._awaitingOpenFileDrop = false;
+                }
+
+                ImGui.EndPopup();
+            }
+
+            ImGui.Begin("File Explorer", ImGuiWindowFlags.NoCollapse);
+            {
+                if (this._workingCabinet == null) {
+
+                } else {
+                    ImGui.Text(this._workingCabinet.Filename);
+                    ImGui.Separator();
+
+                    for (int i = 0; i != this._workingCabinet.Entries.Count; i++) {
+                        Entry currentEntry = this._workingCabinet.Entries[i];
+
+                        ImGui.Text($"{currentEntry.Filename} :: {Math.Round((double) currentEntry.Size / 1024.0, 2)}kb :: Last Modified {DateTimeOffset.FromUnixTimeSeconds(currentEntry.ModificationDate).ToString()}");
+                    }
+                }
+            }
+
+            //File Explorer
+            ImGui.End();
         }
 
+        //Dockspace
         ImGui.End();
     }
 }

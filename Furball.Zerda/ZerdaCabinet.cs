@@ -4,12 +4,14 @@ using System.Text;
 namespace Furball.Zerda;
 
 public class ZerdaCabinet {
-    private List<Entry> _entries;
+    public  List<Entry> Entries;
     private long        _fileOffset;
     private FileStream  _fileStream;
 
+    public string Filename;
+
     public ZerdaCabinet(string filepath) {
-        this._entries = new List<Entry>();
+        this.Entries = new List<Entry>();
 
         FileStream fileStream = File.OpenRead(filepath);
         BinaryReader fileReader = new BinaryReader(fileStream, Encoding.Default, true);
@@ -21,19 +23,21 @@ public class ZerdaCabinet {
         long entryCount = fileReader.ReadInt64();
 
         for (int i = 0; i != entryCount; i++) {
-            this._entries.Add(Entry.Read(fileReader));
+            this.Entries.Add(Entry.Read(fileReader));
         }
 
         this._fileOffset = fileReader.BaseStream.Position;
         this._fileStream = fileStream;
+
+        this.Filename = filepath;
     }
 
     ~ZerdaCabinet() {
-        this._fileStream.Close();
+        this._fileStream?.Close();
     }
 
     public ZerdaCabinet() {
-        this._entries = new List<Entry>();
+        this.Entries = new List<Entry>();
     }
 
     public void AddFile(string filepath, string desiredName = "") {
@@ -50,7 +54,7 @@ public class ZerdaCabinet {
             FileData = fileBytes
         };
 
-        this._entries.Add(newEntry);
+        this.Entries.Add(newEntry);
     }
 
     public void Write(string filepath) {
@@ -70,10 +74,10 @@ public class ZerdaCabinet {
 
         fileWriter.Write(new char[] { 'Z', 'R', 'D' });
 
-        fileWriter.Write((long) this._entries.Count);
+        fileWriter.Write((long) this.Entries.Count);
 
-        for (int i = 0; i < this._entries.Count; i++) {
-            Entry currentEntry = this._entries[i];
+        for (int i = 0; i < this.Entries.Count; i++) {
+            Entry currentEntry = this.Entries[i];
 
             currentEntry.WriteListing(fileWriter);
         }
@@ -85,8 +89,8 @@ public class ZerdaCabinet {
         MemoryStream stream = new MemoryStream();
         using BinaryWriter fileWriter = new BinaryWriter(stream, Encoding.Default, true);
 
-        for (int i = 0; i < this._entries.Count; i++) {
-            Entry currentEntry = this._entries[i];
+        for (int i = 0; i < this.Entries.Count; i++) {
+            Entry currentEntry = this.Entries[i];
             currentEntry.Location = fileWriter.BaseStream.Position;
 
             fileWriter.Write(currentEntry.FileData);
@@ -96,7 +100,7 @@ public class ZerdaCabinet {
     }
 
     public byte[] ReadFile(string filename) {
-        Entry foundEntry = this._entries.Find(file => file.Filename == filename);
+        Entry foundEntry = this.Entries.Find(file => file.Filename == filename);
 
         byte[] readData = new byte[foundEntry.Size];
 
