@@ -1,115 +1,172 @@
-﻿using System.IO.MemoryMappedFiles;
-using System.Text;
+﻿using System.Text;
 
 namespace Furball.Zerda;
 
 public class ZerdaCabinet {
-    public  List<Entry> Entries;
-    private long        _fileOffset;
-    private FileStream  _fileStream;
+	/// <summary>
+	///     The offset where files start in the cabinet
+	/// </summary>
+	private long _fileOffset;
 
-    public string Filename;
+	/// <summary>
+	///     The stream where we read the cabinet data from
+	/// </summary>
+	private Stream _stream;
 
-    public ZerdaCabinet(string filepath) {
-        this.Entries = new List<Entry>();
+	/// <summary>
+	///     The entries contained in this cabinet
+	/// </summary>
+	public List<Entry> Entries { get; private set; }
 
-        FileStream fileStream = File.OpenRead(filepath);
-        BinaryReader fileReader = new BinaryReader(fileStream, Encoding.Default, true);
+	/// <summary>
+	///     The filename of the cabinet
+	/// </summary>
+	public string Filename;
 
-        //File Magic
-        if (new string(fileReader.ReadChars(3)) != "ZRD")
-            throw new InvalidDataException("File Magic invalid.");
+	public ZerdaCabinet(string filepath) {
+		FileStream fileStream = File.OpenRead(filepath);
 
-        long entryCount = fileReader.ReadInt64();
+		this.LoadFromStream(fileStream);
+	}
 
-        for (int i = 0; i != entryCount; i++) {
-            this.Entries.Add(Entry.Read(fileReader));
-        }
+	public ZerdaCabinet() {
+		this.Entries = new List<Entry>();
+	}
 
-        this._fileOffset = fileReader.BaseStream.Position;
-        this._fileStream = fileStream;
+	private void LoadFromStream(Stream stream) {
+		if (!stream.CanSeek)
+			throw new ArgumentException("Stream must be seekable");
 
-        this.Filename = filepath;
-    }
+		if (!stream.CanRead)
+			throw new ArgumentException("Stream must be readable");
 
-    ~ZerdaCabinet() {
-        this._fileStream?.Close();
-    }
+		BinaryReader fileReader = new BinaryReader(stream, Encoding.UTF8, true);
 
-    public ZerdaCabinet() {
-        this.Entries = new List<Entry>();
-    }
+		//File Magic
+		if (new string(fileReader.ReadChars(3)) != "ZRD")
+			throw new InvalidDataException("File Magic invalid.");
 
-    public void AddFile(string filepath, string desiredName = "") {
-        byte[] fileBytes = File.ReadAllBytes(filepath);
+		//Read the amount of entries
+		long entryCount = fileReader.ReadInt64();
 
-        if (desiredName == "")
-            desiredName = Path.GetFileName(filepath);
+		//Create a new list with a preset capacity to avoid resizing the list multiple times while adding entries
+		this.Entries = new List<Entry>((int)entryCount);
 
-        Entry newEntry = new Entry {
-            Filename = desiredName,
-            Location = 0,
-            ModificationDate = DateTimeOffset.Now.ToUnixTimeSeconds(),
-            Size = fileBytes.Length,
-            FileData = fileBytes
-        };
+		//Read all the entries one after another
+		for (int i = 0; i != entryCount; i++)
+			this.Entries.Add(Entry.Read(fileReader));
 
-        this.Entries.Add(newEntry);
-    }
+		//Save the file offset for later use
+		this._fileOffset = fileReader.BaseStream.Position;
+		this._stream     = stream;
+	}
 
-    public void Write(string filepath) {
-        using FileStream fileStream = File.OpenWrite(filepath);
-        using BinaryWriter fileWriter = new BinaryWriter(fileStream, Encoding.Default, true);
+	~ZerdaCabinet() {
+		this._stream.Close();
+	}
 
-        byte[] files = this.WriteFiles();
-        byte[] entryListing = this.WriteHeaderAndEntryListing();
+	/// <summary>
+	///     Adds a new file to the cabinet
+	/// </summary>
+	/// <param name="filepath">The path to the file</param>
+	/// <param name="desiredName">The desired name in the cabinet</param>
+	public void AddFile(string filepath, string desiredName = "") {
+		//Read all the bytes of the file
+		byte[] fileBytes = File.ReadAllBytes(filepath);
 
-        fileWriter.Write(entryListing);
-        fileWriter.Write(files);
-    }
+		//If the desired name is empty, use the filename of the file
+		if (desiredName == "")
+			desiredName = Path.GetFileName(filepath);
 
-    private byte[] WriteHeaderAndEntryListing() {
-        MemoryStream stream = new MemoryStream();
-        using BinaryWriter fileWriter = new BinaryWriter(stream, Encoding.Default, true);
+		this.AddFile(fileBytes, desiredName);
+	}
 
-        fileWriter.Write(new char[] { 'Z', 'R', 'D' });
+	public void AddFile(byte[] data, string desiredName = "") {
+		//If the desired name is empty, use a random name
+		if (desiredName == "")
+			desiredName = Guid.NewGuid().ToString();
 
-        fileWriter.Write((long) this.Entries.Count);
+		//Create a new entry with the desired name and the file bytes
+		Entry newEntry = new Entry {
+			Filename         = desiredName,
+			Location         = 0,
+			ModificationDate = DateTimeOffset.Now.ToUnixTimeSeconds(),
+			Size             = data.Length,
+			FileData         = data
+		};
 
-        for (int i = 0; i < this.Entries.Count; i++) {
-            Entry currentEntry = this.Entries[i];
+		//Add the entry to the list
+		this.Entries.Add(newEntry);	
+	}
 
-            currentEntry.WriteListing(fileWriter);
-        }
+	/// <summary>
+	///     Writes the cabinet to a file
+	/// </summary>
+	/// <param name="filepath">The output file</param>
+	public void Write(string filepath) {
+		using FileStream   fileStream = File.OpenWrite(filepath);
+		using BinaryWriter fileWriter = new BinaryWriter(fileStream, Encoding.UTF8, true);
 
-        return stream.ToArray();
-    }
+		this.WriteFiles(fileWriter);
+		this.WriteHeaderAndEntryListing(fileWriter);
 
-    private byte[] WriteFiles() {
-        MemoryStream stream = new MemoryStream();
-        using BinaryWriter fileWriter = new BinaryWriter(stream, Encoding.Default, true);
+		//Make sure to flush the contents to the file
+		fileWriter.Flush();
+	}
 
-        for (int i = 0; i < this.Entries.Count; i++) {
-            Entry currentEntry = this.Entries[i];
-            currentEntry.Location = fileWriter.BaseStream.Position;
+	/// <summary>
+	///     Writes the header and entry listing to a byte array
+	/// </summary>
+	private void WriteHeaderAndEntryListing(BinaryWriter writer) {
+		//Write the file magic
+		writer.Write(new[] { 'Z', 'R', 'D' });
 
-            fileWriter.Write(currentEntry.FileData);
-        }
+		//Write the amount of entries
+		writer.Write((long)this.Entries.Count);
 
-        return stream.ToArray();
-    }
+		//Write all the entries
+		foreach (Entry currentEntry in this.Entries)
+			currentEntry.WriteListing(writer);
+	}
 
-    public byte[] ReadFile(string filename) {
-        Entry foundEntry = this.Entries.Find(file => file.Filename == filename);
+	/// <summary>
+	///     Write the files to a byte array
+	/// </summary>
+	private void WriteFiles(BinaryWriter writer) {
+		//Write all the files
+		foreach (Entry currentEntry in this.Entries) {
+			currentEntry.Location = writer.BaseStream.Position;
 
-        byte[] readData = new byte[foundEntry.Size];
+			writer.Write(currentEntry.FileData);
+		}
+	}
 
-        this._fileStream.Seek(foundEntry.Location + this._fileOffset, SeekOrigin.Begin);
-        int read = this._fileStream.Read(readData, 0, (int) foundEntry.Size);
+	/// <summary>
+	///     Read a file from the cabinet
+	/// </summary>
+	/// <param name="filename">The name of the file</param>
+	/// <returns>The read data</returns>
+	/// <exception cref="InvalidDataException">The read data was invalid</exception>
+	public byte[] ReadFile(string filename) {
+		//Find the entry with the given filename
+		Entry foundEntry = this.Entries.Find(file => file.Filename == filename);
 
-        if (read != foundEntry.Size)
-            throw new InvalidDataException("Read less than expected, file is likely corrupt.");
+		//If the entry was not found, throw an exception
+		if (foundEntry == null)
+			throw new InvalidDataException("File not found in cabinet");
 
-        return readData;
-    }
+		//Create a buffer to store the read data
+		byte[] readData = new byte[foundEntry.Size];
+
+		//Seek to the location of the file
+		this._stream.Seek(foundEntry.Location + this._fileOffset, SeekOrigin.Begin);
+		//Read the file data
+		int read = this._stream.Read(readData, 0, (int)foundEntry.Size);
+
+		//If the amount of read bytes is not equal to the size of the file, throw an exception
+		if (read != foundEntry.Size)
+			throw new InvalidDataException("Read less than expected, file is likely corrupt.");
+
+		return readData;
+	}
 }
