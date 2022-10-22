@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using SubstreamSharp;
 
 namespace Furball.Zerda;
 
@@ -11,7 +12,7 @@ public class ZerdaCabinet {
 	/// <summary>
 	///     The stream where we read the cabinet data from
 	/// </summary>
-	private Stream _stream;
+	private FileStream _stream;
 
 	/// <summary>
 	///     The entries contained in this cabinet
@@ -33,7 +34,7 @@ public class ZerdaCabinet {
 		this.Entries = new List<Entry>();
 	}
 
-	private void LoadFromStream(Stream stream) {
+	private void LoadFromStream(FileStream stream) {
 		if (!stream.CanSeek)
 			throw new ArgumentException("Stream must be seekable");
 
@@ -139,6 +140,21 @@ public class ZerdaCabinet {
 
 			writer.Write(currentEntry.FileData);
 		}
+	}
+	
+	/// <summary>
+	/// Gets a substream of the main file stream
+	/// </summary>
+	/// <param name="filename">The name of the file in the cabinet</param>
+	/// <returns>A substream of the file stream containing the file</returns>
+	/// <exception cref="FileNotFoundException"></exception>
+	public Substream GetFile(string filename) {
+		Entry entry = this.Entries.Find(x => x.Filename == filename);
+
+		if (entry == null)
+			throw new FileNotFoundException("File not found in cabinet");
+
+		return new Substream(this._stream, this._fileOffset + entry.Location, entry.Size);
 	}
 
 	/// <summary>
