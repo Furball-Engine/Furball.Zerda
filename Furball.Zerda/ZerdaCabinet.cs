@@ -12,7 +12,7 @@ public class ZerdaCabinet {
 	/// <summary>
 	///     The stream where we read the cabinet data from
 	/// </summary>
-	private FileStream _stream;
+	private Stream _stream;
 
 	/// <summary>
 	///     The entries contained in this cabinet
@@ -33,6 +33,14 @@ public class ZerdaCabinet {
 
 		this.LoadFromStream(fileStream);
 	}
+	
+	/// <summary>
+	/// Open an existing cabinet files
+	/// </summary>
+	/// <param name="stream">The stream to read from</param>
+	public ZerdaCabinet(Stream stream) {
+		this.LoadFromStream(stream);
+	}
 
 	/// <summary>
 	/// Creates a new zerda cabinet
@@ -41,7 +49,7 @@ public class ZerdaCabinet {
 		this.Entries = new List<Entry>();
 	}
 
-	private void LoadFromStream(FileStream stream) {
+	private void LoadFromStream(Stream stream) {
 		if (!stream.CanSeek)
 			throw new ArgumentException("Stream must be seekable");
 
