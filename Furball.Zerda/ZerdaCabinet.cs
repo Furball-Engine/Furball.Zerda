@@ -24,12 +24,19 @@ public class ZerdaCabinet {
 	/// </summary>
 	public string Filename;
 
+	/// <summary>
+	/// Open an existing cabinet file
+	/// </summary>
+	/// <param name="filepath">The filepath of the cabinet to open</param>
 	public ZerdaCabinet(string filepath) {
 		FileStream fileStream = File.OpenRead(filepath);
 
 		this.LoadFromStream(fileStream);
 	}
 
+	/// <summary>
+	/// Creates a new zerda cabinet
+	/// </summary>
 	public ZerdaCabinet() {
 		this.Entries = new List<Entry>();
 	}
@@ -82,6 +89,11 @@ public class ZerdaCabinet {
 		this.AddFile(fileBytes, desiredName);
 	}
 
+	/// <summary>
+	/// Add a file from a byte array
+	/// </summary>
+	/// <param name="data">The data of the file</param>
+	/// <param name="desiredName">The desired name of the file</param>
 	public void AddFile(byte[] data, string desiredName = "") {
 		//If the desired name is empty, use a random name
 		if (desiredName == "")
